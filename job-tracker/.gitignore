@@ -20,5 +20,3 @@ Thumbs.db
 *.log
 logs/
 
-# Spring Boot (IMPORTANT 🔥)
-application.properties

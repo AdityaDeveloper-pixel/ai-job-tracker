@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Add Application</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+</head>
+<body>
+<nav class="navbar navbar-dark bg-dark px-4">
+    <a class="navbar-brand fw-bold" href="/jobs">🎯 Job Tracker</a>
+    <div class="d-flex gap-2">
+        <a href="/analyse" class="btn btn-outline-light btn-sm">🔍 JD Analyser</a>
+        <a href="/campaigns" class="btn btn-outline-light btn-sm">📧 Cold Mails</a>
+        <a href="/jobs" class="btn btn-outline-light btn-sm">← Back</a>
+    </div>
+</nav>
+
+<div class="container mt-4" style="max-width: 800px;">
+    <h4 class="mb-4">Add New Application</h4>
+
+    <form th:action="@{/jobs}" th:object="${jobDto}" method="post">
+
+        <!-- Basic Info -->
+        <div class="card mb-3">
+            <div class="card-header">Basic Info</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Company *</label>
+                        <input type="text" class="form-control" th:field="*{company}" placeholder="e.g. Flipkart"/>
+                        <div class="text-danger small" th:if="${#fields.hasErrors('company')}" th:errors="*{company}"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Role *</label>
+                        <input type="text" class="form-control" th:field="*{role}" placeholder="e.g. SDE-2 Backend"/>
+                        <div class="text-danger small" th:if="${#fields.hasErrors('role')}" th:errors="*{role}"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" th:field="*{status}">
+                            <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Source</label>
+                        <select class="form-select" th:field="*{source}" id="sourceSelect" onchange="toggleColdMailFields()">
+                            <option th:each="s : ${sources}" th:value="${s}" th:text="${s}"></option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cold Mail Fields (shown only when source = COLD_MAIL) -->
+        <div class="card mb-3" id="coldMailSection" style="display:none;">
+            <div class="card-header">📧 Cold Mail Details</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">HR Name</label>
+                        <input type="text" class="form-control" th:field="*{hrName}" placeholder="e.g. Priya Sharma"/>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">HR Email</label>
+                        <input type="email" class="form-control" th:field="*{hrEmail}" placeholder="priya@company.com"/>
+                        <div class="text-danger small" th:if="${#fields.hasErrors('hrEmail')}" th:errors="*{hrEmail}"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Mail Sent Date</label>
+                        <input type="date" class="form-control" th:field="*{mailSentDate}"/>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Follow-up Reminder Date</label>
+                        <input type="date" class="form-control" th:field="*{followUpDate}"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- JD and Resume -->
+        <div class="card mb-3">
+            <div class="card-header">AI Analysis (optional but recommended)</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Job Description Text</label>
+                    <textarea class="form-control" th:field="*{jdText}" rows="6"
+                              placeholder="Paste the full job description here. AI will extract required skills automatically."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Your Resume Text</label>
+                    <textarea class="form-control" th:field="*{resumeText}" rows="6"
+                              placeholder="Paste your resume text here. AI will calculate your fit score (0-100)."></textarea>
+                </div>
+                <div class="text-muted small">💡 Both fields are optional. If provided, AI will auto-analyze when you save.</div>
+            </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="card mb-4">
+            <div class="card-header">Notes</div>
+            <div class="card-body">
+                <textarea class="form-control" th:field="*{notes}" rows="3"
+                          placeholder="Any notes about this application, referral contact, etc."></textarea>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mb-5">
+            <button type="submit" class="btn btn-primary">Save Application</button>
+            <a href="/jobs" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function toggleColdMailFields() {
+        const source = document.getElementById('sourceSelect').value;
+        const section = document.getElementById('coldMailSection');
+        section.style.display = source === 'COLD_MAIL' ? 'block' : 'none';
+    }
+    toggleColdMailFields();
+</script>
+</body>
+</html>

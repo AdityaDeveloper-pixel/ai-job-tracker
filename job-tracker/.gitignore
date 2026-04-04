@@ -1,0 +1,24 @@
+# Environment
+.env
+
+# Maven
+target/
+*.class
+*.jar
+
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Spring Boot (IMPORTANT 🔥)
+application.properties

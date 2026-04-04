@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: job-tracker-db
+    environment:
+      POSTGRES_DB: jobtracker
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - job-tracker-network
+
+  job-service:
+    build: ./job-service
+    container_name: job-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/jobtracker
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      AI_SERVICE_URL: http://ai-agent-service:8082
+    depends_on:
+      - postgres
+      - ai-agent-service
+    networks:
+      - job-tracker-network
+
+  ai-agent-service:
+    build: ./ai-agent-service
+    container_name: ai-agent-service
+    ports:
+      - "8082:8082"
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+    networks:
+      - job-tracker-network
+
+volumes:
+  pgdata:
+
+networks:
+  job-tracker-network:
+    driver: bridge

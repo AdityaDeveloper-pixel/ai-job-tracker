@@ -2,6 +2,7 @@ package com.jobtracker.jobservice.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @Data
@@ -19,4 +20,7 @@ public class CampaignDTO {
     // HR recipient lists — parallel arrays from form
     private List<String> hrNames;
     private List<String> hrEmails;
+
+    // Optional resume attachment (PDF/DOC) — uploaded from campaign create form
+    private MultipartFile resumeFile;
 }

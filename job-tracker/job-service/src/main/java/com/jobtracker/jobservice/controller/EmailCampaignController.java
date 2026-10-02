@@ -10,6 +10,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.Base64;
@@ -34,12 +35,17 @@ public class EmailCampaignController {
         return "campaigns/create";
     }
 
-    // Create campaign and send emails
-    @PostMapping("/campaigns")
+    /**
+     * Create campaign and send emails.
+     * Uses multipart/form-data so the resume PDF can be uploaded alongside the form fields.
+     */
+    @PostMapping(value = "/campaigns", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public String create(@Valid @ModelAttribute("campaignDto") CampaignDTO dto,
                          BindingResult result,
+                         @RequestParam(value = "resumeFile", required = false) MultipartFile resumeFile,
                          Model model,
                          RedirectAttributes redirectAttributes) {
+
         if (result.hasErrors()) {
             return "campaigns/create";
         }
@@ -50,11 +56,25 @@ public class EmailCampaignController {
             return "campaigns/create";
         }
 
+        // Validate file type if provided (only PDF / Word)
+        if (resumeFile != null && !resumeFile.isEmpty()) {
+            String ct = resumeFile.getContentType();
+            if (ct == null || (!ct.equals("application/pdf")
+                    && !ct.equals("application/msword")
+                    && !ct.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))) {
+                model.addAttribute("error", "Resume must be a PDF or Word document (.pdf / .doc / .docx).");
+                return "campaigns/create";
+            }
+            // Attach to DTO so service can read it
+            dto.setResumeFile(resumeFile);
+        }
+
         try {
             campaignService.createAndSend(dto);
-            redirectAttributes.addFlashAttribute("successMessage", "Campaign created and emails sent!");
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Campaign created! Emails are being sent asynchronously via Kafka. Refresh this page to see delivery status updates.");
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Some emails may have failed: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", "Failed to queue emails: " + e.getMessage());
         }
 
         return "redirect:/campaigns";

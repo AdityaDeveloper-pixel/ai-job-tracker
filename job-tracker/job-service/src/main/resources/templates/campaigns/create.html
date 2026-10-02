@@ -4,10 +4,11 @@
     <meta charset="UTF-8"/>
     <title>New Cold Mail Campaign</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
 </head>
 <body>
 <nav class="navbar navbar-dark bg-dark px-4">
-    <a class="navbar-brand fw-bold" href="/jobs">🎯 Job Tracker</a>
+    <a class="navbar-brand fw-bold" href="/jobs">✦ Job Tracker</a>
     <a href="/campaigns" class="btn btn-outline-light btn-sm">← Back</a>
 </nav>
 
@@ -16,7 +17,12 @@
 
     <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
 
-    <form th:action="@{/campaigns}" th:object="${campaignDto}" method="post">
+    <!--
+        IMPORTANT: enctype="multipart/form-data" is required for file uploads.
+        The form now POSTs as multipart so the resume PDF travels alongside the text fields.
+    -->
+    <form th:action="@{/campaigns}" th:object="${campaignDto}" method="post"
+          enctype="multipart/form-data">
 
         <!-- Campaign Info -->
         <div class="card mb-3">
@@ -34,7 +40,7 @@
                     <div class="col-12">
                         <label class="form-label">Email Subject *</label>
                         <input type="text" class="form-control" th:field="*{subject}"
-                               placeholder="e.g. Application for SDE-2 Backend Role — Java Developer"/>
+                               placeholder="e.g. Application for SDE-2 Backend Role – Java Developer"/>
                         <div class="text-danger small" th:if="${#fields.hasErrors('subject')}" th:errors="*{subject}"></div>
                     </div>
                 </div>
@@ -49,9 +55,37 @@
             </div>
             <div class="card-body">
                 <textarea class="form-control" th:field="*{body}" rows="10"
-                          placeholder="Dear {hrName},&#10;&#10;I hope this email finds you well. I am writing to express my interest in the SDE-2 Backend role at your company...&#10;&#10;Best regards,&#10;Your Name"></textarea>
+                          placeholder="Dear {hrName},&#10;&#10;I hope this email finds you well...&#10;&#10;Best regards,&#10;Your Name"></textarea>
                 <div class="text-danger small" th:if="${#fields.hasErrors('body')}" th:errors="*{body}"></div>
                 <div class="text-muted small mt-1">💡 <code>{hrName}</code> will be automatically replaced with each HR's name when sending.</div>
+            </div>
+        </div>
+
+        <!-- Resume Attachment -->
+        <div class="card mb-3">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-paperclip"></i>
+                <span>Resume Attachment <span class="text-muted small">(optional)</span></span>
+            </div>
+            <div class="card-body">
+                <input type="file"
+                       name="resumeFile"
+                       id="resumeFile"
+                       class="form-control"
+                       accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"/>
+                <div class="text-muted small mt-2">
+                    📎 Accepted formats: <strong>PDF, DOC, DOCX</strong> — Max size: <strong>5 MB</strong><br/>
+                    Your resume will be attached to <em>every</em> email in this campaign automatically.
+                    No Drive link needed!
+                </div>
+                <!-- Live filename preview -->
+                <div id="file-preview" class="mt-2 d-none">
+                    <span class="badge bg-success fs-6">
+                        <i class="bi bi-file-earmark-check me-1"></i>
+                        <span id="file-name"></span>
+                        &nbsp;(<span id="file-size"></span>)
+                    </span>
+                </div>
             </div>
         </div>
 
@@ -82,7 +116,7 @@
 
         <div class="d-flex gap-2 mb-5">
             <button type="submit" class="btn btn-primary">
-                Send Campaign
+                <i class="bi bi-send me-1"></i> Send Campaign
             </button>
             <a href="/campaigns" class="btn btn-outline-secondary">Cancel</a>
         </div>
@@ -92,6 +126,33 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     let count = 1;
+
+    // Show filename + size preview when user picks a file
+    document.getElementById('resumeFile').addEventListener('change', function () {
+        const preview = document.getElementById('file-preview');
+        const nameEl  = document.getElementById('file-name');
+        const sizeEl  = document.getElementById('file-size');
+
+        if (this.files && this.files[0]) {
+            const file = this.files[0];
+            const sizeKb = (file.size / 1024).toFixed(1);
+            const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+
+            // Reject files > 5 MB before even submitting
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File is too large. Maximum allowed size is 5 MB.');
+                this.value = '';
+                preview.classList.add('d-none');
+                return;
+            }
+
+            nameEl.textContent = file.name;
+            sizeEl.textContent = sizeKb > 1024 ? sizeMb + ' MB' : sizeKb + ' KB';
+            preview.classList.remove('d-none');
+        } else {
+            preview.classList.add('d-none');
+        }
+    });
 
     function addRecipient() {
         if (count >= 10) {

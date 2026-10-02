@@ -1,22 +1,33 @@
 package com.jobtracker.jobservice.service;
 
 import com.jobtracker.jobservice.dto.CampaignDTO;
+import com.jobtracker.jobservice.dto.EmailEvent;
 import com.jobtracker.jobservice.entity.CampaignRecipient;
 import com.jobtracker.jobservice.entity.EmailCampaign;
+import com.jobtracker.jobservice.kafka.KafkaEmailProducer;
 import com.jobtracker.jobservice.repository.CampaignRecipientRepository;
 import com.jobtracker.jobservice.repository.EmailCampaignRepository;
-import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
+/**
+ * Manages email campaigns.
+ *
+ * Email sending is now EVENT-DRIVEN via Apache Kafka:
+ *   1. Campaign + recipients are saved to DB
+ *   2. One EmailEvent per recipient is published to the "email-send" Kafka topic
+ *   3. KafkaEmailConsumer picks up events and sends emails via SMTP
+ *   4. Failed emails are retried up to 3 times, then moved to DLQ
+ *
+ * This means createAndSend() returns IMMEDIATELY — no more blocking the HTTP thread.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -24,10 +35,7 @@ public class EmailCampaignService {
 
     private final EmailCampaignRepository campaignRepository;
     private final CampaignRecipientRepository recipientRepository;
-    private final JavaMailSender mailSender;
-
-    @Value("${app.base.url}")
-    private String baseUrl;
+    private final KafkaEmailProducer kafkaEmailProducer;
 
     public List<EmailCampaign> getAllCampaigns() {
         return campaignRepository.findAllByOrderByCreatedAtDesc();
@@ -38,8 +46,29 @@ public class EmailCampaignService {
                 .orElseThrow(() -> new RuntimeException("Campaign not found: " + id));
     }
 
-    public EmailCampaign createAndSend(CampaignDTO dto) {
-        // Build campaign
+    /**
+     * Creates a campaign, saves to DB, then publishes Kafka events for each recipient.
+     * Returns immediately — email delivery happens asynchronously via Kafka consumer.
+     */
+    public EmailCampaign createAndSend(CampaignDTO dto) throws Exception {
+
+        // --- Resolve optional resume attachment ---
+        String resumeBase64 = null;
+        String resumeFilename = null;
+        String resumeContentType = "application/octet-stream";
+
+        MultipartFile file = dto.getResumeFile();
+        if (file != null && !file.isEmpty()) {
+            resumeBase64 = Base64.getEncoder().encodeToString(file.getBytes());
+            resumeFilename = file.getOriginalFilename();
+            String ct = file.getContentType();
+            if (ct != null && !ct.isBlank()) {
+                resumeContentType = ct;
+            }
+            log.info("Resume attachment received: {} ({} bytes)", resumeFilename, file.getSize());
+        }
+
+        // Build campaign entity
         EmailCampaign campaign = EmailCampaign.builder()
                 .subject(dto.getSubject())
                 .body(dto.getBody())
@@ -60,6 +89,7 @@ public class EmailCampaignService {
                         .campaign(campaign)
                         .hrName(name)
                         .hrEmail(email)
+                        .deliveryStatus("QUEUED")
                         .build();
                 recipients.add(recipient);
             }
@@ -68,57 +98,28 @@ public class EmailCampaignService {
         campaign.setRecipients(recipients);
         EmailCampaign saved = campaignRepository.save(campaign);
 
-        // Send emails to each recipient
+        // ---- Publish Kafka events (one per recipient) ----
         for (CampaignRecipient recipient : saved.getRecipients()) {
-            sendEmail(recipient, dto.getSubject(), dto.getBody());
+            EmailEvent event = EmailEvent.builder()
+                    .recipientId(recipient.getId())
+                    .campaignId(saved.getId())
+                    .hrName(recipient.getHrName())
+                    .hrEmail(recipient.getHrEmail())
+                    .subject(dto.getSubject())
+                    .body(dto.getBody())
+                    .resumeBase64(resumeBase64)
+                    .resumeFilename(resumeFilename)
+                    .resumeContentType(resumeContentType)
+                    .retryCount(0)
+                    .build();
+
+            kafkaEmailProducer.publish(event);
         }
+
+        log.info("Campaign {} created — {} email events published to Kafka",
+                saved.getId(), saved.getRecipients().size());
 
         return saved;
-    }
-
-    private void sendEmail(CampaignRecipient recipient, String subject, String body) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setTo(recipient.getHrEmail());
-            helper.setSubject(subject);
-
-            // Personalise body — replace {hrName} placeholder
-            String personalizedBody = body.replace("{hrName}", recipient.getHrName());
-
-            // Build tracking pixel URL
-            String trackingPixelUrl = baseUrl + "/track/open/" + recipient.getId();
-            String trackingPixel = "<img src=\"" + trackingPixelUrl + "\" width=\"1\" height=\"1\" style=\"display:none\"/>";
-
-            // Wrap in basic HTML with tracking pixel at bottom
-            String htmlBody = "<html><body>"
-                    + personalizedBody.replace("\n", "<br/>")
-                    + "<br/><br/>"
-                    + trackingPixel
-                    + "</body></html>";
-
-            helper.setText(htmlBody, true);
-
-            mailSender.send(message);
-
-            // Mark as sent
-            recipient.setSent(true);
-            recipient.setSentAt(LocalDateTime.now());
-            recipient.setDeliveryStatus("SENT");
-            recipientRepository.save(recipient);
-
-            log.info("Email sent to: {}", recipient.getHrEmail());
-
-            // Small delay between emails to avoid spam filters
-            Thread.sleep(1500);
-
-        } catch (Exception e) {
-            log.error("Failed to send email to: {}", recipient.getHrEmail(), e);
-            recipient.setDeliveryStatus("FAILED");
-            recipient.setFailureReason(e.getMessage());
-            recipientRepository.save(recipient);
-        }
     }
 
     // Called when tracking pixel is loaded — marks email as opened

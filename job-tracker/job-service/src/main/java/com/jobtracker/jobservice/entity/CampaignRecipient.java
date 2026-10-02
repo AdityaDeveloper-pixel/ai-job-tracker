@@ -40,9 +40,13 @@ public class CampaignRecipient {
     private LocalDateTime openedAt;
     private LocalDateTime repliedAt;
 
-    // PENDING / SENT / FAILED
+    // PENDING / SENT / RETRYING / FAILED
     @Builder.Default
     private String deliveryStatus = "PENDING";
 
     private String failureReason;
+
+    // Kafka retry count — tracks how many times email send was retried
+    @Builder.Default
+    private Integer retryCount = 0;
 }

@@ -30,32 +30,46 @@
 
             <!-- Summary stats -->
             <div class="row g-3">
-                <div class="col-6 col-md-3">
+                <div class="col-6 col-md-2">
                     <div class="border rounded p-3 text-center">
                         <div class="fs-4 fw-bold text-secondary"
                              th:text="${campaign.recipients.size()}">0</div>
                         <div class="small text-muted">Total</div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3">
+                <div class="col-6 col-md-2">
+                    <div class="border rounded p-3 text-center">
+                        <div class="fs-4 fw-bold text-primary"
+                             th:text="${#aggregates.sum(campaign.recipients.![deliveryStatus == 'QUEUED' ? 1 : 0])}">0</div>
+                        <div class="small text-muted">Queued</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
                     <div class="border rounded p-3 text-center">
                         <div class="fs-4 fw-bold text-success"
                              th:text="${#aggregates.sum(campaign.recipients.![sent ? 1 : 0])}">0</div>
                         <div class="small text-muted">Sent</div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3">
+                <div class="col-6 col-md-2">
                     <div class="border rounded p-3 text-center">
                         <div class="fs-4 fw-bold text-info"
                              th:text="${#aggregates.sum(campaign.recipients.![opened ? 1 : 0])}">0</div>
                         <div class="small text-muted">Opened</div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3">
+                <div class="col-6 col-md-2">
                     <div class="border rounded p-3 text-center">
                         <div class="fs-4 fw-bold text-warning"
                              th:text="${#aggregates.sum(campaign.recipients.![replied ? 1 : 0])}">0</div>
                         <div class="small text-muted">Replied</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="border rounded p-3 text-center">
+                        <div class="fs-4 fw-bold text-danger"
+                             th:text="${#aggregates.sum(campaign.recipients.![deliveryStatus == 'FAILED' ? 1 : 0])}">0</div>
+                        <div class="small text-muted">Failed</div>
                     </div>
                 </div>
             </div>
@@ -87,6 +101,13 @@
                             <span th:if="${r.deliveryStatus == 'FAILED'}" class="badge bg-danger"
                                   th:title="${r.failureReason}">✗ Failed</span>
                             <span th:if="${r.deliveryStatus == 'PENDING'}" class="badge bg-secondary">Pending</span>
+                            <span th:if="${r.deliveryStatus == 'QUEUED'}" class="badge bg-primary">
+                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>Queued
+                            </span>
+                            <span th:if="${r.deliveryStatus == 'RETRYING'}" class="badge bg-warning text-dark"
+                                  th:title="'Retry #' + ${r.retryCount}">
+                                ⟳ Retrying (#<span th:text="${r.retryCount}"></span>)
+                            </span>
                         </td>
                         <td>
                             <span th:if="${r.opened}" class="text-success fw-semibold">

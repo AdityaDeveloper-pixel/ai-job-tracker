@@ -20,6 +20,7 @@ import java.util.Base64;
 public class EmailCampaignController {
 
     private final EmailCampaignService campaignService;
+    private final com.jobtracker.jobservice.service.EmailTemplateService templateService;
 
     // List all campaigns
     @GetMapping("/campaigns")
@@ -32,6 +33,7 @@ public class EmailCampaignController {
     @GetMapping("/campaigns/new")
     public String showForm(Model model) {
         model.addAttribute("campaignDto", new CampaignDTO());
+        model.addAttribute("templates", templateService.getAllTemplates());
         return "campaigns/create";
     }
 

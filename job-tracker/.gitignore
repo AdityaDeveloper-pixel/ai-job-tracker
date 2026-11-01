@@ -1,5 +1,6 @@
 # Environment
 .env
+**/src/main/resources/application.properties
 
 # Maven
 target/

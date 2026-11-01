@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Login - Job Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+</head>
+<body class="bg-light">
+<div class="container" style="max-width: 420px; margin-top: 10vh;">
+    <h3 class="text-center mb-4">Job Tracker</h3>
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <h5 class="mb-3">Log in</h5>
+
+            <div class="alert alert-danger" th:if="${param.error}">Invalid email or password.</div>
+            <div class="alert alert-success" th:if="${param.logout}">You have been logged out.</div>
+            <div class="alert alert-success" th:if="${param.registered}">Account created. Please log in.</div>
+            <div class="alert alert-danger" th:if="${param.googleError}">
+                Google sign-in failed. If you signed up with a password, log in with your password instead.
+            </div>
+            <div class="alert alert-warning" th:if="${param.accountExists}">
+                This email is already registered with a password. Please log in with your email and password.
+            </div>
+
+            <form th:action="@{/login}" method="post">
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="username" class="form-control" required autofocus/>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <input type="password" name="password" class="form-control" required/>
+                </div>
+                <button type="submit" class="btn btn-dark w-100">Log in</button>
+            </form>
+
+            <div class="text-center text-muted my-3">or</div>
+            <a th:href="@{/oauth2/authorization/google}" class="btn btn-outline-dark w-100">Continue with Google</a>
+            <p class="text-center text-muted mt-3 mb-0">
+                No account? <a th:href="@{/register}">Register</a>
+            </p>
+        </div>
+    </div>
+</div>
+</body>
+</html>

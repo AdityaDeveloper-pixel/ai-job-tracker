@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Create Email Template</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
+</head>
+<body>
+<nav class="navbar navbar-dark bg-dark px-4">
+    <a class="navbar-brand fw-bold" href="/jobs">≡ƒÄ» Job Tracker</a>
+    <a href="/templates" class="btn btn-outline-light btn-sm">ΓåÉ Back to Templates</a>
+</nav>
+
+<div class="container mt-4" style="max-width: 700px;">
+    <h4 class="mb-4">≡ƒô¥ New Email Template</h4>
+
+    <form th:action="@{/templates}" th:object="${templateDto}" method="post">
+
+        <div class="card mb-3">
+            <div class="card-header">Template Details</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Template Name *</label>
+                    <input type="text" class="form-control" th:field="*{name}"
+                           placeholder="e.g. SDE Cold Mail, Fresher Intro, Follow-up"/>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email Subject *</label>
+                    <input type="text" class="form-control" th:field="*{subject}"
+                           placeholder="e.g. Application for {jobRole} ΓÇö Java Developer"/>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('subject')}" th:errors="*{subject}"></div>
+                    <div class="text-muted small mt-1">≡ƒÆí You can use <code>{jobRole}</code> and <code>{company}</code> as placeholders.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between">
+                <span>Email Body *</span>
+                <span class="text-muted small">Supports <code>{hrName}</code>, <code>{company}</code>, <code>{jobRole}</code></span>
+            </div>
+            <div class="card-body">
+                <textarea class="form-control" th:field="*{body}" rows="12"
+                          placeholder="Dear {hrName},&#10;&#10;I hope this email finds you well. I am writing to express my interest in the {jobRole} position at {company}.&#10;&#10;[Your pitch here]&#10;&#10;Best regards,&#10;Your Name"></textarea>
+                <div class="text-danger small" th:if="${#fields.hasErrors('body')}" th:errors="*{body}"></div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mb-5">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save me-1"></i> Save Template
+            </button>
+            <a href="/templates" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

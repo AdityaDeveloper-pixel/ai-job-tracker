@@ -16,40 +16,16 @@ Track job applications, analyse job descriptions with AI, and send cold-mail cam
 
 ## Architecture
 
-## 🏗️ Architecture
-
-```
-   Browser (Thymeleaf UI)                  API clients (Postman, mobile)
-          │  session cookie + CSRF                │  Authorization: Bearer JWT
-          └────────────────────┬───────────────────┘
-                               ▼
-        ┌───────────────────────────────────────────┐
-        │            job-service  :8081             │
-        │  Spring Security: form login, Google, JWT │
-        │  Thymeleaf UI + REST Controllers          │
-        │  Spring Data JPA + Spring Mail + Kafka    │
-        └─────┬───────────────┬───────────────┬─────┘
-              │ WebClient     │ JPA           │ events
-              ▼               ▼               ▼
-   ┌──────────────────┐ ┌─────────────┐ ┌──────────────────┐
-   │ ai-agent-service │ │ PostgreSQL  │ │      Kafka       │
-   │      :8082       │ │   :5432     │ │  email + dead-   │
-   │ Groq API →       │ │ rows scoped │ │  letter topics   │
-   │ gpt-oss-120b     │ │ by user_id  │ └────────┬─────────┘
-   └──────────────────┘ └─────────────┘          │ consumed by job-service
-                                                 ▼
-                                          ┌─────────────┐
-                                          │ Gmail SMTP  │
-                                          │ (outbound)  │
-                                          └─────────────┘
-```
-
-### How a request flows
-
-1. **Sign in.** Browser users log in with a password or Google and get a session cookie. API clients call `/api/auth/login` and get a JWT.
-2. **Add or analyse a job.** `job-service` saves the job for the logged-in user, then calls `ai-agent-service`, which asks Groq to extract skills and score the resume.
-3. **Send a campaign.** `job-service` saves the campaign and puts one event per recipient on Kafka. A consumer sends each email through Gmail, retries failures, and parks the ones that still fail on the dead-letter topic.
-4. **Track opens.** When an HR opens the email, their mail client loads a tiny pixel from `/track/open/{id}`, and the open is recorded. This is the only endpoint that works without a login.
+```mermaid
+flowchart LR
+    B[Browser] --> J[job-service :8081]
+    J -->|JD and resume| A[ai-agent-service :8082]
+    A -->|chat completions| G[Groq API]
+    J --> P[(PostgreSQL)]
+    J -->|email events| K[Kafka]
+    K -->|consume| J
+    K -->|after retries fail| D[Dead-letter topic]
+    J -->|SMTP| M[Gmail]
 ```
 
 | Service | Port | Role |
@@ -202,4 +178,25 @@ The AI service also exposes `POST /api/ai/analyze` on port 8082, for internal us
 
 Open an issue to discuss a change first, then submit a pull request from a feature branch.
 
-<!-- Add screenshots under docs/ and link them here -->
+## 🔒 Security Notes
+
+- Never commit `application.properties` with real credentials to GitHub
+- `.gitignore` already excludes `.env`
+- Gmail App Password ≠ your Gmail login password
+
+---
+
+
+
+## 👨‍💻 Author
+
+**[Aditya Singh]** — Java Developer | Spring Boot | Microservices
+
+- GitHub: [@AdityaDeveloper-pixel](https://github.com/AdityaDeveloper-pixel)
+- LinkedIn: [linkedin.com/in/aditya-singh-234739161](https://www.linkedin.com/in/aditya-singh-234739161)
+
+---
+
+## 📄 License
+
+MIT — free to use, modify, and share.

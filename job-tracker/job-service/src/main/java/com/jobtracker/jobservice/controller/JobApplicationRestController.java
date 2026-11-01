@@ -46,6 +46,19 @@ public class JobApplicationRestController {
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
+    // PUT /api/jobs/{id} - update existing application
+    @PutMapping("/{id}")
+    public ResponseEntity<JobApplication> update(@PathVariable Long id,
+                                                  @Valid @RequestBody JobApplicationDTO dto) {
+        return ResponseEntity.ok(service.update(id, dto));
+    }
+
+    // POST /api/jobs/{id}/reanalyse - re-trigger AI analysis
+    @PostMapping("/{id}/reanalyse")
+    public ResponseEntity<JobApplication> reAnalyse(@PathVariable Long id) {
+        return ResponseEntity.ok(service.reAnalyse(id));
+    }
+
     // PUT /api/jobs/{id}/status - update status
     @PutMapping("/{id}/status")
     public ResponseEntity<JobApplication> updateStatus(@PathVariable Long id,

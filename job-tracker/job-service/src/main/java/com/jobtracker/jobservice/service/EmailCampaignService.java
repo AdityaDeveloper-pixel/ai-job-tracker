@@ -4,6 +4,7 @@ import com.jobtracker.jobservice.dto.CampaignDTO;
 import com.jobtracker.jobservice.dto.EmailEvent;
 import com.jobtracker.jobservice.entity.CampaignRecipient;
 import com.jobtracker.jobservice.entity.EmailCampaign;
+import com.jobtracker.jobservice.exception.ResourceNotFoundException;
 import com.jobtracker.jobservice.kafka.KafkaEmailProducer;
 import com.jobtracker.jobservice.repository.CampaignRecipientRepository;
 import com.jobtracker.jobservice.repository.EmailCampaignRepository;
@@ -36,21 +37,23 @@ public class EmailCampaignService {
     private final EmailCampaignRepository campaignRepository;
     private final CampaignRecipientRepository recipientRepository;
     private final KafkaEmailProducer kafkaEmailProducer;
+    private final CurrentUserService currentUser;
+
 
     public List<EmailCampaign> getAllCampaigns() {
-        return campaignRepository.findAllByOrderByCreatedAtDesc();
+        return campaignRepository.findByUserOrderByCreatedAtDesc(currentUser.get());
     }
 
     public EmailCampaign getById(Long id) {
-        return campaignRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Campaign not found: " + id));
+        return campaignRepository.findByIdAndUser(id, currentUser.get())
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign", id));
     }
 
     /**
      * Creates a campaign, saves to DB, then publishes Kafka events for each recipient.
      * Returns immediately — email delivery happens asynchronously via Kafka consumer.
      */
-    public EmailCampaign createAndSend(CampaignDTO dto) throws Exception {
+    public EmailCampaign    createAndSend(CampaignDTO dto) throws Exception {
 
         // --- Resolve optional resume attachment ---
         String resumeBase64 = null;
@@ -70,6 +73,7 @@ public class EmailCampaignService {
 
         // Build campaign entity
         EmailCampaign campaign = EmailCampaign.builder()
+                .user(currentUser.get())
                 .subject(dto.getSubject())
                 .body(dto.getBody())
                 .jobRole(dto.getJobRole())
@@ -136,14 +140,15 @@ public class EmailCampaignService {
 
     // Manually mark replied from UI
     public void markReplied(Long recipientId) {
-        recipientRepository.findById(recipientId).ifPresent(r -> {
-            r.setReplied(true);
-            r.setRepliedAt(LocalDateTime.now());
-            recipientRepository.save(r);
-        });
+        CampaignRecipient r = recipientRepository
+                .findByIdAndCampaign_User(recipientId, currentUser.get())
+                .orElseThrow(() -> new ResourceNotFoundException("Recipient", recipientId));
+        r.setReplied(true);
+        r.setRepliedAt(LocalDateTime.now());
+        recipientRepository.save(r);
     }
 
     public void deleteCampaign(Long id) {
-        campaignRepository.deleteById(id);
+        campaignRepository.delete(getById(id));
     }
 }

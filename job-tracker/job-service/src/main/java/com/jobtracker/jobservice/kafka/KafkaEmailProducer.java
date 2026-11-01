@@ -2,6 +2,7 @@ package com.jobtracker.jobservice.kafka;
 
 import com.jobtracker.jobservice.config.KafkaConfig;
 import com.jobtracker.jobservice.dto.EmailEvent;
+import com.jobtracker.jobservice.service.CurrentUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -22,6 +23,7 @@ import java.util.concurrent.CompletableFuture;
 public class KafkaEmailProducer {
 
     private final KafkaTemplate<String, EmailEvent> kafkaTemplate;
+    private final CurrentUserService currentUser;
 
     /**
      * Publish an email event asynchronously.

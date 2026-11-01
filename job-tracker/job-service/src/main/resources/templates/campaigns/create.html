@@ -24,6 +24,21 @@
     <form th:action="@{/campaigns}" th:object="${campaignDto}" method="post"
           enctype="multipart/form-data">
 
+        <!-- Load Template Dropdown -->
+        <div class="card mb-3 border-info" th:if="${templates != null && !templates.isEmpty()}">
+            <div class="card-header bg-info bg-opacity-10 d-flex justify-content-between align-items-center">
+                <span>≡ƒô¥ Load from Template</span>
+                <a href="/templates/new" class="btn btn-sm btn-outline-info">+ New Template</a>
+            </div>
+            <div class="card-body">
+                <select id="templateSelect" class="form-select" onchange="loadTemplate(this.value)">
+                    <option value="">ΓÇö Select a template ΓÇö</option>
+                    <option th:each="t : ${templates}" th:value="${t.id}" th:text="${t.name}"></option>
+                </select>
+                <div class="text-muted small mt-1">Selecting a template will auto-fill the subject and body below.</div>
+            </div>
+        </div>
+
         <!-- Campaign Info -->
         <div class="card mb-3">
             <div class="card-header">Campaign Info</div>
@@ -179,6 +194,36 @@
     function removeRow(btn) {
         btn.closest('.recipient-row').remove();
         count--;
+    }
+
+    // Load template via AJAX and fill subject + body fields
+    function loadTemplate(templateId) {
+        if (!templateId) return;
+
+        const subjectField = document.getElementById('subjectField');
+        const bodyField = document.getElementById('bodyField');
+
+        // Confirm if fields already have content
+        if (subjectField.value.trim() || bodyField.value.trim()) {
+            if (!confirm('This will replace the current subject and body. Continue?')) {
+                document.getElementById('templateSelect').value = '';
+                return;
+            }
+        }
+
+        fetch('/api/templates/' + templateId)
+            .then(response => {
+                if (!response.ok) throw new Error('Template not found');
+                return response.json();
+            })
+            .then(template => {
+                subjectField.value = template.subject;
+                bodyField.value = template.body;
+            })
+            .catch(err => {
+                alert('Failed to load template: ' + err.message);
+                document.getElementById('templateSelect').value = '';
+            });
     }
 </script>
 </body>

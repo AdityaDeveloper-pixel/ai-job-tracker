@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   postgres:
@@ -55,8 +54,11 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/jobtracker
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      GMAIL_USERNAME: ${GMAIL_USERNAME}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD}
       AI_SERVICE_URL: http://ai-agent-service:8082
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8081}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       - postgres
@@ -71,7 +73,7 @@ services:
     ports:
       - "8082:8082"
     environment:
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GROQ_API_KEY: ${GROQ_API_KEY}
     networks:
       - job-tracker-network
 

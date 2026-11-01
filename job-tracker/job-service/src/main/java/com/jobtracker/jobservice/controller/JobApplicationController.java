@@ -4,6 +4,7 @@ import com.jobtracker.jobservice.dto.JobApplicationDTO;
 import com.jobtracker.jobservice.entity.JobApplication;
 import com.jobtracker.jobservice.enums.ApplicationSource;
 import com.jobtracker.jobservice.enums.ApplicationStatus;
+import com.jobtracker.jobservice.exception.ResourceNotFoundException;
 import com.jobtracker.jobservice.service.JobApplicationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -61,10 +62,68 @@ public class JobApplicationController {
     @GetMapping("/{id}")
     public String detail(@PathVariable Long id, Model model) {
         JobApplication job = service.getById(id)
-                .orElseThrow(() -> new RuntimeException("Job not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Job application", id));
         model.addAttribute("job", job);
         model.addAttribute("statuses", ApplicationStatus.values());
         return "jobs/detail";
+    }
+
+    // Show edit form ΓÇö pre-fills DTO from existing entity
+    @GetMapping("/{id}/edit")
+    public String showEditForm(@PathVariable Long id, Model model) {
+        JobApplication job = service.getById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Job application", id));
+
+        // Map entity ΓåÆ DTO so the form binds correctly
+        JobApplicationDTO dto = new JobApplicationDTO();
+        dto.setCompany(job.getCompany());
+        dto.setRole(job.getRole());
+        dto.setJdText(job.getJdText());
+        dto.setResumeText(job.getResumeText());
+        dto.setStatus(job.getStatus());
+        dto.setSource(job.getSource());
+        dto.setHrName(job.getHrName());
+        dto.setHrEmail(job.getHrEmail());
+        dto.setMailSentDate(job.getMailSentDate());
+        dto.setFollowUpDate(job.getFollowUpDate());
+        dto.setFollowUpDone(job.getFollowUpDone());
+        dto.setNotes(job.getNotes());
+
+        model.addAttribute("jobDto", dto);
+        model.addAttribute("jobId", id);
+        model.addAttribute("statuses", ApplicationStatus.values());
+        model.addAttribute("sources", ApplicationSource.values());
+        return "jobs/edit";
+    }
+
+    // Save edited application
+    @PostMapping("/{id}/edit")
+    public String update(@PathVariable Long id,
+                         @Valid @ModelAttribute("jobDto") JobApplicationDTO dto,
+                         BindingResult result,
+                         Model model,
+                         RedirectAttributes redirectAttributes) {
+        if (result.hasErrors()) {
+            model.addAttribute("jobId", id);
+            model.addAttribute("statuses", ApplicationStatus.values());
+            model.addAttribute("sources", ApplicationSource.values());
+            return "jobs/edit";
+        }
+        service.update(id, dto);
+        redirectAttributes.addFlashAttribute("successMessage", "Application updated successfully!");
+        return "redirect:/jobs/" + id;
+    }
+
+    // Re-trigger AI analysis
+    @PostMapping("/{id}/reanalyse")
+    public String reAnalyse(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            service.reAnalyse(id);
+            redirectAttributes.addFlashAttribute("successMessage", "AI re-analysis complete!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "AI analysis failed: " + e.getMessage());
+        }
+        return "redirect:/jobs/" + id;
     }
 
     // Update status

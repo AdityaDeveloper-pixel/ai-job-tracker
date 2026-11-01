@@ -14,7 +14,7 @@
     <groupId>com.jobtracker</groupId>
     <artifactId>ai-agent-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <n>ai-agent-service</n>
+    <name>ai-agent-service</name>
     <description>Job Tracker - AI Agent Service using Google Gemini</description>
 
     <properties>
